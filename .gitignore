@@ -1,0 +1,15 @@
+# ignore log files
+*.log
+
+# python stuff
+*.pyc
+**/__pycache__
+
+# venv
+./venv/**
+
+# idea files
+**/.idea/**
+
+# trained models
+*.pt
