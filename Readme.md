@@ -66,3 +66,11 @@ If you use this code in your work or project, please reference:
       booktitle={{Proceedings of the 34th British Machine Vision Conference ({BMVC})}},
       year={2023}
     }
+
+> **[BMVC 2023] A Comprehensive Crossroad Camera Dataset of Mobility Aid Users**            
+L. Mohr, N. Kirillova, H. Possegger, H. Bischof\
+[Paper](https://papers.bmvc2023.org/0743.pdf)
+
+If you are interested in the code used to create the HAR results, check out 
+> **[GitHub] Human Attribute Classification**\
+[Repository](https://github.com/nadezola/AttributeClassification/) 
