@@ -125,10 +125,12 @@ def non_max_suppression(
         if multi_label:
             if tree:
                 conf_passed = cls > conf_thres
-                leaf_idx = torch.ones_like(tree['tree'], dtype=torch.bool)
-                leaf_idx[tree['root']] = False
+                is_leaf = torch.ones_like(tree['tree'], dtype=torch.bool)
+                is_leaf[tree['root']] = False
+                leaf_idx = torch.nonzero(is_leaf).squeeze()
                 i, j = torch.where(conf_passed[:, leaf_idx])
-                conf_passed[i, tree['tree'][j]] = False  # if a leaf node is above the threshold, remove root
+                # if a leaf node is above the threshold, remove root
+                conf_passed[i, tree['tree'][leaf_idx[j]]] = False
             else:
                 conf_passed = cls > conf_thres
 
