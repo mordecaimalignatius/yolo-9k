@@ -364,14 +364,18 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     if cuda and RANK != -1:
         model = smart_DDP(model)
 
-    names_list = list(data_dict['names'].values())
-    class_tree = torch.tensor(
-        [names_list.index(x) if x != '' else -1 for x in data_dict['tree']], dtype=torch.long, device=device)
-    tree = {'root': torch.nonzero(class_tree == -1).flatten()}
-    tree_map = torch.empty_like(class_tree)
-    tree_map.copy_(class_tree)
-    tree_map[class_tree == -1] = tree['root']
-    tree['tree'] = tree_map
+    if 'tree' in data_dict:
+        names_list = list(data_dict['names'].values())
+        class_tree = torch.tensor(
+            [names_list.index(x) if x != '' else -1 for x in data_dict['tree']], dtype=torch.long, device=device)
+        tree = {'root': torch.nonzero(class_tree == -1).flatten()}
+        tree_map = torch.empty_like(class_tree)
+        tree_map.copy_(class_tree)
+        tree_map[class_tree == -1] = tree['root']
+        tree['tree'] = tree_map
+    else:
+        class_tree = None
+        tree = None
 
     # Model attributes
     nl = de_parallel(model).model[-1].nl  # number of detection layers (to scale hyps)
@@ -419,10 +423,11 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             ema = ModelEMA(model) if RANK in {-1, 0} else None
 
             best_fitness, start_epoch, epochs = smart_resume(ckpt, optimizer, ema, best, epochs)
-            LOGGER.warning(f'restarting network training from epoch {start_epoch -1} and reseeding')
 
             # reseed and save new seed
-            rng_seed(datetime.now().microsecond)
+            new_seed = datetime.now().microsecond
+            LOGGER.warning(f'restarting network training from epoch {start_epoch -1} and reseeding ({new_seed})')
+            rng_seed(new_seed)
             seeds[start_epoch] = rng_save_restore()
 
         for epoch in range(start_epoch, epochs):  # epoch --------------------------------------------------------------
@@ -480,6 +485,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     if loss.isnan():
                         LOGGER.warning(f'loss NaN encountered in epoch {epoch}, restarting training!')
                         reload_state = True
+                        del loss, loss_items, pred
                         break
 
                     if RANK != -1:

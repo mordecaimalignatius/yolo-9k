@@ -373,14 +373,17 @@ def run(
                                        workers=workers,
                                        prefix=colorstr(f'{task}: '))[0]
 
-        names_list = list(data['names'].values())
-        class_tree = torch.tensor(
-            [names_list.index(x) if x != '' else -1 for x in data['tree']], dtype=torch.long, device=device)
-        tree = {'root': torch.nonzero(class_tree == -1).flatten()}
-        tree_map = torch.empty_like(class_tree)
-        tree_map.copy_(class_tree)
-        tree_map[class_tree == -1] = tree['root']
-        tree['tree'] = tree_map
+        if 'tree' in data:
+            names_list = list(data['names'].values())
+            class_tree = torch.tensor(
+                [names_list.index(x) if x != '' else -1 for x in data['tree']], dtype=torch.long, device=device)
+            tree = {'root': torch.nonzero(class_tree == -1).flatten()}
+            tree_map = torch.empty_like(class_tree)
+            tree_map.copy_(class_tree)
+            tree_map[class_tree == -1] = tree['root']
+            tree['tree'] = tree_map
+        else:
+            tree = None
 
     seen = 0
     confusion_matrix = ConfusionMatrix(nc=nc)
@@ -440,6 +443,12 @@ def run(
                     stats.append((correct, *torch.zeros((2, 0), device=device), labels[:, 0]))
                     if plots:
                         confusion_matrix.process_batch(detections=None, labels=labels[:, 0])
+
+                if save_txt:
+                    # write empty detection file
+                    with open(save_dir / 'labels' / f'{path.stem}.txt', 'w') as f:
+                        f.write('')
+
                 continue
 
             # Predictions
@@ -456,6 +465,11 @@ def run(
                 correct = process_batch(predn, labelsn, iouv)
                 if plots:
                     confusion_matrix.process_batch(predn, labelsn)
+
+            elif npr:
+                # no labels, but predictions
+                confusion_matrix.trigger_wrong_increment()
+
             stats.append((correct, pred[:, 4], pred[:, 5], labels[:, 0]))  # (correct, conf, pcls, tcls)
 
             # Save/log
